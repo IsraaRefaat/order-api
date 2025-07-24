@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog 
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+
+    <changeSet id="3.1" author="order-api">
+        <comment>Add product_id column to order_items table for catalog service integration</comment>
+        
+        <addColumn tableName="order_items">
+            <column name="product_id" type="BIGINT">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+        
+        <rollback>
+            <dropColumn tableName="order_items" columnName="product_id"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="3.2" author="order-api">
+        <comment>Make customer_name nullable since we only use customer_email</comment>
+        
+        <dropNotNullConstraint tableName="orders" 
+                               columnName="customer_name" 
+                               columnDataType="VARCHAR(100)"/>
+        
+        <rollback>
+            <addNotNullConstraint tableName="orders" 
+                                  columnName="customer_name" 
+                                  columnDataType="VARCHAR(100)"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="3.3" author="order-api">
+        <comment>Set product_id as not null for new orders (after initial deployment)</comment>
+        
+        <addNotNullConstraint tableName="order_items" 
+                              columnName="product_id" 
+                              columnDataType="BIGINT"/>
+        
+        <rollback>
+            <dropNotNullConstraint tableName="order_items" 
+                                   columnName="product_id" 
+                                   columnDataType="BIGINT"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="3.4" author="order-api">
+        <comment>Create index on product_id for better query performance</comment>
+        
+        <createIndex tableName="order_items" indexName="idx_order_items_product_id">
+            <column name="product_id"/>
+        </createIndex>
+        
+        <rollback>
+            <dropIndex tableName="order_items" indexName="idx_order_items_product_id"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="3.5" author="order-api">
+        <comment>Create index on customer_email for better query performance</comment>
+        
+        <createIndex tableName="orders" indexName="idx_orders_customer_email">
+            <column name="customer_email"/>
+        </createIndex>
+        
+        <rollback>
+            <dropIndex tableName="orders" indexName="idx_orders_customer_email"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="3.6" author="order-api">
+        <comment>Create index on status for better query performance</comment>
+        
+        <createIndex tableName="orders" indexName="idx_orders_status">
+            <column name="status"/>
+        </createIndex>
+        
+        <rollback>
+            <dropIndex tableName="orders" indexName="idx_orders_status"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="3.7" author="order-api">
+        <comment>Create index on created_at for better query performance on order history</comment>
+        
+        <createIndex tableName="orders" indexName="idx_orders_created_at">
+            <column name="created_at"/>
+        </createIndex>
+        
+        <rollback>
+            <dropIndex tableName="orders" indexName="idx_orders_created_at"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
