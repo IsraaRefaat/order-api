@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog 
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+
+    <changeSet id="4.1" author="order-api">
+        <comment>Create comprehensive schema update for catalog service integration</comment>
+        
+        <!-- Ensure the initial schema is properly aligned with our entity -->
+        <sql>
+            <!-- Update any existing order_items without product_id to have a default value -->
+            UPDATE order_items SET product_id = 1 WHERE product_id IS NULL;
+        </sql>
+        
+        <rollback>
+            <sql>
+                <!-- Rollback: Set product_id back to null for records that were updated -->
+                UPDATE order_items SET product_id = NULL WHERE product_id = 1;
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="4.2" author="order-api">
+        <comment>Add constraints and triggers for data integrity</comment>
+        
+        <!-- Add check constraint to ensure positive quantities -->
+        <sql>
+            ALTER TABLE order_items ADD CONSTRAINT chk_order_items_quantity_positive 
+            CHECK (quantity > 0);
+        </sql>
+        
+        <!-- Add check constraint to ensure positive prices -->
+        <sql>
+            ALTER TABLE order_items ADD CONSTRAINT chk_order_items_unit_price_positive 
+            CHECK (unit_price >= 0);
+        </sql>
+        
+        <!-- Add check constraint to ensure positive total prices -->
+        <sql>
+            ALTER TABLE order_items ADD CONSTRAINT chk_order_items_total_price_positive 
+            CHECK (total_price >= 0);
+        </sql>
+        
+        <!-- Add check constraint for order totals -->
+        <sql>
+            ALTER TABLE orders ADD CONSTRAINT chk_orders_total_positive 
+            CHECK (order_total >= 0);
+        </sql>
+        
+        <!-- Add check constraint for final amounts -->
+        <sql>
+            ALTER TABLE orders ADD CONSTRAINT chk_orders_final_amount_positive 
+            CHECK (final_amount >= 0);
+        </sql>
+        
+        <!-- Add check constraint for discount amounts -->
+        <sql>
+            ALTER TABLE orders ADD CONSTRAINT chk_orders_discount_amount_positive 
+            CHECK (discount_amount >= 0);
+        </sql>
+        
+        <rollback>
+            <sql>
+                ALTER TABLE order_items DROP CONSTRAINT IF EXISTS chk_order_items_quantity_positive;
+                ALTER TABLE order_items DROP CONSTRAINT IF EXISTS chk_order_items_unit_price_positive;
+                ALTER TABLE order_items DROP CONSTRAINT IF EXISTS chk_order_items_total_price_positive;
+                ALTER TABLE orders DROP CONSTRAINT IF EXISTS chk_orders_total_positive;
+                ALTER TABLE orders DROP CONSTRAINT IF EXISTS chk_orders_final_amount_positive;
+                ALTER TABLE orders DROP CONSTRAINT IF EXISTS chk_orders_discount_amount_positive;
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="4.3" author="order-api">
+        <comment>Add comments to tables and columns for documentation</comment>
+        
+        <sql>
+            COMMENT ON TABLE orders IS 'Main orders table storing customer order information';
+            COMMENT ON COLUMN orders.id IS 'Primary key - unique order identifier';
+            COMMENT ON COLUMN orders.customer_email IS 'Customer email address - required for order processing';
+            COMMENT ON COLUMN orders.customer_name IS 'Customer name - optional field for display purposes';
+            COMMENT ON COLUMN orders.order_total IS 'Total amount before discounts';
+            COMMENT ON COLUMN orders.discount_amount IS 'Amount discounted from order total';
+            COMMENT ON COLUMN orders.final_amount IS 'Final amount after applying discounts';
+            COMMENT ON COLUMN orders.applied_coupon_code IS 'Coupon code applied to this order';
+            COMMENT ON COLUMN orders.status IS 'Current order status (PENDING, CONFIRMED, SHIPPED, DELIVERED, CANCELLED)';
+            COMMENT ON COLUMN orders.created_at IS 'Timestamp when order was created';
+            COMMENT ON COLUMN orders.updated_at IS 'Timestamp when order was last updated';
+            
+            COMMENT ON TABLE order_items IS 'Order items table storing individual products in each order';
+            COMMENT ON COLUMN order_items.id IS 'Primary key - unique order item identifier';
+            COMMENT ON COLUMN order_items.order_id IS 'Foreign key reference to orders table';
+            COMMENT ON COLUMN order_items.product_id IS 'Product ID from catalog service';
+            COMMENT ON COLUMN order_items.product_name IS 'Product name fetched from catalog service';
+            COMMENT ON COLUMN order_items.quantity IS 'Quantity of this product in the order';
+            COMMENT ON COLUMN order_items.unit_price IS 'Price per unit fetched from catalog service';
+            COMMENT ON COLUMN order_items.total_price IS 'Total price for this line item (quantity * unit_price)';
+        </sql>
+        
+        <rollback>
+            <sql>
+                COMMENT ON TABLE orders IS NULL;
+                COMMENT ON TABLE order_items IS NULL;
+            </sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
