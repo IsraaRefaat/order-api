@@ -11,7 +11,7 @@ public class OrderProducer {
         this.rabbitTemplate = rabbitTemplate;
     }
 
-    public String sendOrderMessage(OrderNotificationMessage message) {
+    public String sendOrderMessage(OrderEvent message) {
         rabbitTemplate.convertAndSend(
                 RabbitMQConfig.EXCHANGE,
                 RabbitMQConfig.ROUTING_KEY,

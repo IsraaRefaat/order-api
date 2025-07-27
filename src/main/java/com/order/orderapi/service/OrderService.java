@@ -8,6 +8,8 @@ import com.order.orderapi.dto.*;
 import com.order.orderapi.entity.Order;
 import com.order.orderapi.entity.OrderItem;
 import com.order.orderapi.entity.OrderStatus;
+import com.order.orderapi.rabbit.OrderEvent;
+import com.order.orderapi.rabbit.OrderProducer;
 import com.order.orderapi.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +29,7 @@ public class OrderService {
     private final CouponServiceClient couponServiceClient;
     private final CategoryServiceClient categoryServiceClient;
     private final UserServiceClient userServiceClient;
+    private final OrderProducer orderProducer;
 
 
     @Transactional
@@ -120,7 +123,18 @@ public class OrderService {
         
         order.setStatus(newStatus);
         Order updatedOrder = orderRepository.save(order);
-        
+
+        if (order.getStatus().equals(OrderStatus.CONFIRMED)) {
+            OrderEvent message = new OrderEvent(
+                    order.getId(),
+                    order.getCustomerEmail(),
+                    order.getCustomerName(),
+                    order.getAppliedCouponCode(),
+                    order.getFinalAmount(),
+                    order.getId()
+            );
+            orderProducer.sendOrderMessage(message);
+        }
         log.info("Updated order {} status to: {}", orderId, newStatus);
         return convertToOrderResponse(updatedOrder);
     }
