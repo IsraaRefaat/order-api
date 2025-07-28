@@ -4,7 +4,7 @@
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog 
                    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
 
-    <changeSet id="3.1" author="order-api">
+    <changeSet id="3.1" author="esraa.refaat">
         <comment>Add product_id column to order_items table for catalog service integration</comment>
         
         <addColumn tableName="order_items">
@@ -18,7 +18,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="3.2" author="order-api">
+    <changeSet id="3.2" author="esraa.refaat">
         <comment>Make customer_name nullable since we only use customer_email</comment>
         
         <dropNotNullConstraint tableName="orders" 
@@ -32,7 +32,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="3.3" author="order-api">
+    <changeSet id="3.3" author="esraa.refaat">
         <comment>Set product_id as not null for new orders (after initial deployment)</comment>
         
         <addNotNullConstraint tableName="order_items" 
@@ -46,7 +46,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="3.4" author="order-api">
+    <changeSet id="3.4" author="esraa.refaat">
         <comment>Create index on product_id for better query performance</comment>
         
         <createIndex tableName="order_items" indexName="idx_order_items_product_id">
@@ -58,7 +58,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="3.5" author="order-api">
+    <changeSet id="3.5" author="esraa.refaat">
         <comment>Create index on customer_email for better query performance</comment>
         
         <createIndex tableName="orders" indexName="idx_orders_customer_email">
@@ -70,7 +70,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="3.6" author="order-api">
+    <changeSet id="3.6" author="esraa.refaat">
         <comment>Create index on status for better query performance</comment>
         
         <createIndex tableName="orders" indexName="idx_orders_status">
@@ -82,7 +82,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="3.7" author="order-api">
+    <changeSet id="3.7" author="esraa.refaat">
         <comment>Create index on created_at for better query performance on order history</comment>
         
         <createIndex tableName="orders" indexName="idx_orders_created_at">

@@ -8,10 +8,8 @@ import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-
 @Configuration
 public class RabbitMQConfig {
-
     public static final String QUEUE = "order-notification-queue";
     public static final String EXCHANGE = "order-notification-exchange";
     public static final String ROUTING_KEY = "order.notification.key";

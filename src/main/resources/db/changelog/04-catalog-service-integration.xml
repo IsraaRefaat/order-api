@@ -4,7 +4,7 @@
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog 
                    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
 
-    <changeSet id="4.1" author="order-api">
+    <changeSet id="4.1" author="esraa.refaat">
         <comment>Create comprehensive schema update for catalog service integration</comment>
         
         <!-- Ensure the initial schema is properly aligned with our entity -->
@@ -21,7 +21,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="4.2" author="order-api">
+    <changeSet id="4.2" author="esraa.refaat">
         <comment>Add constraints and triggers for data integrity</comment>
         
         <!-- Add check constraint to ensure positive quantities -->
@@ -72,7 +72,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="4.3" author="order-api">
+    <changeSet id="4.3" author="esraa.refaat">
         <comment>Add comments to tables and columns for documentation</comment>
         
         <sql>
