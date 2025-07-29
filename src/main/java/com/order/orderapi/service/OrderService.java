@@ -98,7 +98,7 @@ public class OrderService {
         for(OrderItem orderItem : savedOrder.getOrderItems()){
             products_quantities.put(orderItem.getProductId(), orderItem.getQuantity());
         }
-        stockMessageSender.sendConsumeStockMessage(products_quantities);
+        stockMessageSender.sendConsumeStockMessage(savedOrder.getId(), products_quantities);
 
         log.info("Created order with ID: {} for customer: {}", savedOrder.getId(), request.getCustomerEmail());
         return convertToOrderResponse(savedOrder);

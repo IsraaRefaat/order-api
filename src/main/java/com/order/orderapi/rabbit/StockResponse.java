@@ -9,8 +9,10 @@ import java.util.Map;
 @Getter
 @Setter
 @ToString
-public class ConsumeStockMessage {
+public class StockResponse {
 
     private Long orderId;
-    private Map<Long, Integer> products_quantities;
+    private boolean success;
+    private String message;
+    private Map<String, Integer> insufficientProducts;
 }
