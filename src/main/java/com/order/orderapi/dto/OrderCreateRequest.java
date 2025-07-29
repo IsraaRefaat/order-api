@@ -1,10 +1,7 @@
 package com.order.orderapi.dto;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -30,4 +27,8 @@ public class OrderCreateRequest {
 
     @Size(max = 100, message = "Coupon code cannot exceed 100 characters")
     private String couponCode;
+
+    private double price;
+    @NotNull
+    private String cardNumber;
 }

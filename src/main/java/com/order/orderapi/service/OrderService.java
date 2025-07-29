@@ -13,6 +13,8 @@ import com.order.orderapi.rabbit.OrderProducer;
 import com.order.orderapi.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +32,9 @@ public class OrderService {
     private final CategoryServiceClient categoryServiceClient;
     private final UserServiceClient userServiceClient;
     private final OrderProducer orderProducer;
+    private final BankServiceImp bankService;
+    @Value("${email.merchant}")
+    private String merchantEmail;
 
 
     @Transactional
@@ -81,6 +86,10 @@ public class OrderService {
         order.calculateFinalAmount();
 
         Order savedOrder = orderRepository.save(order);
+
+        double amountAfterDiscount = savedOrder.getFinalAmount().doubleValue();
+        applyWithdrawTransactionForCustomer(amountAfterDiscount, request);
+        applyDepositTransactionForMerchant(amountAfterDiscount);
 
         if (appliedCouponCode != null) {
             CouponConsumeRequest consumeRequest = new CouponConsumeRequest(
@@ -219,5 +228,20 @@ public class OrderService {
             log.error("User authentication validation failed", e);
             throw new RuntimeException("User authentication validation failed: " + e.getMessage());
         }
+    }
+
+    private void applyDepositTransactionForMerchant(double amount) {
+        TransactionRequest transactionRequestMerchant = new TransactionRequest();
+        transactionRequestMerchant.setCardNumber("7175600978372244");
+        transactionRequestMerchant.setAmount(amount);
+        bankService.deposit(transactionRequestMerchant);
+        log.info(" merchant deposit done");
+    }
+    private void applyWithdrawTransactionForCustomer(double amount, OrderCreateRequest orderModel) {
+        TransactionRequest transactionRequestCustomer = new TransactionRequest();
+        transactionRequestCustomer.setAmount(amount);
+        transactionRequestCustomer.setCardNumber(orderModel.getCardNumber());
+        ResponseEntity<String> withdrawResponse = bankService.withdraw(transactionRequestCustomer);
+        log.info("Customer withdrawal request processed successfully. Response: {}", withdrawResponse.getBody());
     }
 }
