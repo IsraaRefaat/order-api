@@ -31,4 +31,13 @@ public class OrderCreateRequest {
     private double price;
     @NotNull
     private String cardNumber;
+
+    @Size(max = 100, message = "Name on card cannot exceed 100 characters")
+    private String nameOnCard;
+
+    @Pattern(regexp = "^(0[1-9]|1[0-2])/[0-9]{2}$", message = "Expiry date must be in MM/YY format")
+    private String expiryDate;
+
+    @Pattern(regexp = "^[0-9]{3,4}$", message = "CVV must be 3 or 4 digits")
+    private String cvv;
 }

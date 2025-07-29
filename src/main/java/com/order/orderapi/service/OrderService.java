@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -64,13 +65,13 @@ public class OrderService {
 
         if (request.getCouponCode() != null && !request.getCouponCode().trim().isEmpty()) {
             CouponValidationRequest validationRequest = new CouponValidationRequest(
-                request.getCouponCode(), 
-                orderTotal, 
-                request.getCustomerEmail()
+                    request.getCouponCode(),
+                    orderTotal,
+                    request.getCustomerEmail()
             );
-            
+
             CouponValidationResponse validationResponse = couponServiceClient.validateCoupon(validationRequest);
-            
+
             if (validationResponse.isValid()) {
                 discountAmount = validationResponse.getDiscountAmount();
                 appliedCouponCode = request.getCouponCode();
@@ -87,15 +88,37 @@ public class OrderService {
 
         Order savedOrder = orderRepository.save(order);
 
+        /////////////////////////////////////  banking
+
+
+        validateCardDetails(request);
+
+
         double amountAfterDiscount = savedOrder.getFinalAmount().doubleValue();
-        applyWithdrawTransactionForCustomer(amountAfterDiscount, request);
-        applyDepositTransactionForMerchant(amountAfterDiscount);
+        try {
+            // 1. Customer withdrawal الأول
+            applyWithdrawTransactionForCustomer(amountAfterDiscount, request);
+            log.info("Customer withdrawal successful for order: {}", savedOrder.getId());
+
+            // 2. لو نجح، اعملي merchant deposit
+            applyDepositTransactionForMerchant(amountAfterDiscount);
+            log.info("Merchant deposit successful for order: {}", savedOrder.getId());
+
+        } catch (Exception e) {
+            log.error("Banking transaction failed for order: {}", savedOrder.getId(), e);
+            // يمكن تغيري status الطلب لـ FAILED
+            savedOrder.setStatus(OrderStatus.FAILED);
+            orderRepository.save(savedOrder);
+            throw new RuntimeException("Payment processing failed: " + e.getMessage());
+        }
+
+        ////////////////////////////////////////////////////////
 
         if (appliedCouponCode != null) {
             CouponConsumeRequest consumeRequest = new CouponConsumeRequest(
-                appliedCouponCode, 
-                savedOrder.getCustomerEmail(), 
-                savedOrder.getId().toString()
+                    appliedCouponCode,
+                    savedOrder.getCustomerEmail(),
+                    savedOrder.getId().toString()
             );
             couponServiceClient.consumeCoupon(consumeRequest);
         }
@@ -129,7 +152,7 @@ public class OrderService {
     public OrderResponse updateOrderStatus(Long orderId, OrderStatus newStatus) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found with ID: " + orderId));
-        
+
         order.setStatus(newStatus);
         Order updatedOrder = orderRepository.save(order);
 
@@ -151,7 +174,7 @@ public class OrderService {
     private OrderItem createOrderItem(OrderItemRequest request, Order order) {
         // Fetch product details from catalog service
         ProductDto product = getProductFromCatalogService(request.getProductId());
-        
+
         OrderItem orderItem = new OrderItem();
         orderItem.setOrder(order);
         orderItem.setProductId(request.getProductId());
@@ -208,7 +231,7 @@ public class OrderService {
                 throw new RuntimeException("Product not found with ID: " + productId);
             }
             ProductDto product = catalogResponse.getData();
-            log.info("Retrieved product details for ID: {} - Name: {}, Price: {}", 
+            log.info("Retrieved product details for ID: {} - Name: {}, Price: {}",
                     productId, product.getName(), product.getPrice());
             return product;
         } catch (Exception e) {
@@ -232,16 +255,57 @@ public class OrderService {
 
     private void applyDepositTransactionForMerchant(double amount) {
         TransactionRequest transactionRequestMerchant = new TransactionRequest();
-        transactionRequestMerchant.setCardNumber("7175600978372244");
+        transactionRequestMerchant.setCardNumber("6656025033877442");
         transactionRequestMerchant.setAmount(amount);
-        bankService.deposit(transactionRequestMerchant);
+        ResponseEntity<String> depositResponse = bankService.deposit(transactionRequestMerchant);
+
+        // Check if deposit was successful
+        if (!depositResponse.getStatusCode().is2xxSuccessful()) {
+            throw new RuntimeException("Merchant deposit failed: " + depositResponse.getBody());
+        }
+
         log.info(" merchant deposit done");
     }
+
     private void applyWithdrawTransactionForCustomer(double amount, OrderCreateRequest orderModel) {
         TransactionRequest transactionRequestCustomer = new TransactionRequest();
         transactionRequestCustomer.setAmount(amount);
         transactionRequestCustomer.setCardNumber(orderModel.getCardNumber());
         ResponseEntity<String> withdrawResponse = bankService.withdraw(transactionRequestCustomer);
+        // Check if withdrawal was successful
+        if (!withdrawResponse.getStatusCode().is2xxSuccessful()) {
+            throw new RuntimeException("Customer withdrawal failed: " + withdrawResponse.getBody());
+        }
         log.info("Customer withdrawal request processed successfully. Response: {}", withdrawResponse.getBody());
     }
-}
+
+    private void validateCardDetails(OrderCreateRequest request) {
+        // Card number validation
+        if (request.getCardNumber() == null || !request.getCardNumber().matches("^[0-9]{16}$")) {
+            throw new RuntimeException("Invalid card number - must be 16 digits");
+        }
+
+        // Expiry date validation
+        if (request.getExpiryDate() != null && !request.getExpiryDate().isEmpty()) {
+            if (!request.getExpiryDate().matches("^(0[1-9]|1[0-2])/[0-9]{2}$")) {
+                throw new RuntimeException("Invalid expiry date format - use MM/YY");
+            }
+
+            String[] parts = request.getExpiryDate().split("/");
+            int month = Integer.parseInt(parts[0]);
+            int year = Integer.parseInt("20" + parts[1]);
+
+            LocalDate expiry = LocalDate.of(year, month, 1).plusMonths(1).minusDays(1);
+            if (expiry.isBefore(LocalDate.now())) {
+                throw new RuntimeException("Card has expired");
+            }
+        }
+
+
+        // CVV validation
+        if (request.getCvv() != null && !request.getCvv().matches("^[0-9]{3,4}$")) {
+            throw new RuntimeException("Invalid CVV - must be 3 or 4 digits");
+        }
+    }
+
+}   
