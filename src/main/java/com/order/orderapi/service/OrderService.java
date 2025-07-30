@@ -8,6 +8,7 @@ import com.order.orderapi.dto.*;
 import com.order.orderapi.entity.Order;
 import com.order.orderapi.entity.OrderItem;
 import com.order.orderapi.entity.OrderStatus;
+import com.order.orderapi.rabbit.OrderEvent;
 import com.order.orderapi.rabbit.OrderProducer;
 import com.order.orderapi.rabbit.StockMessageSender;
 import com.order.orderapi.repository.OrderRepository;
@@ -48,16 +49,15 @@ public class OrderService {
 
         log.warn("Current order status: {}", order.getStatus());
 
-        if (order.getStatus().equals(OrderStatus.PENDING)) {
+        if (!order.getStatus().equals(OrderStatus.PENDING)) {
             throw new RuntimeException("Order is not in a valid state for payment. Current status: " + order.getStatus());
         }
 
         validateCardDetails(paymentRequest);
 
-        // احسبي الـ amount من order.getFinalAmount() مش من البودي
         double expectedAmount = order.getFinalAmount().doubleValue();
-        paymentRequest.setAmount(expectedAmount); // حطيه بنفسك هنا
-        paymentRequest.setOrderId(orderId); // تأكيد إضافي لو حصل لخبطة
+        paymentRequest.setAmount(expectedAmount);
+        paymentRequest.setOrderId(orderId);
 
         try {
             applyWithdrawTransactionForCustomer(expectedAmount, paymentRequest);
@@ -73,6 +73,17 @@ public class OrderService {
             order.setStatus(OrderStatus.FAILED);
             orderRepository.save(order);
             throw new RuntimeException("Payment failed: " + e.getMessage());
+        }
+        if (order.getStatus().equals(OrderStatus.CONFIRMED)) {
+            OrderEvent message = new OrderEvent(
+                    order.getId(),
+                    order.getCustomerEmail(),
+                    order.getCustomerName(),
+                    order.getAppliedCouponCode(),
+                    order.getFinalAmount(),
+                    1722361244235L
+            );
+            orderProducer.sendOrderMessage(message);
         }
 
         return convertToOrderResponse(order);

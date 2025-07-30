@@ -28,6 +28,5 @@ public class OrderCreateRequest {
     @Size(max = 100, message = "Coupon code cannot exceed 100 characters")
     private String couponCode;
 
-    private double price;
 
 }
