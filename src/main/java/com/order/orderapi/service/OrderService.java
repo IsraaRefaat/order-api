@@ -8,6 +8,7 @@ import com.order.orderapi.dto.*;
 import com.order.orderapi.entity.Order;
 import com.order.orderapi.entity.OrderItem;
 import com.order.orderapi.entity.OrderStatus;
+import com.order.orderapi.rabbit.OrderProducer;
 import com.order.orderapi.rabbit.StockMessageSender;
 import com.order.orderapi.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
