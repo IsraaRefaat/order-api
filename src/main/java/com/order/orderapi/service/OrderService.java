@@ -92,32 +92,6 @@ public class OrderService {
 
         Order savedOrder = orderRepository.save(order);
 
-        /////////////////////////////////////  banking
-
-
-        validateCardDetails(request);
-
-
-        double amountAfterDiscount = savedOrder.getFinalAmount().doubleValue();
-        try {
-            // 1. Customer withdrawal الأول
-            applyWithdrawTransactionForCustomer(amountAfterDiscount, request);
-            log.info("Customer withdrawal successful for order: {}", savedOrder.getId());
-
-            // 2. لو نجح، اعملي merchant deposit
-            applyDepositTransactionForMerchant(amountAfterDiscount);
-            log.info("Merchant deposit successful for order: {}", savedOrder.getId());
-
-        } catch (Exception e) {
-            log.error("Banking transaction failed for order: {}", savedOrder.getId(), e);
-            // يمكن تغيري status الطلب لـ FAILED
-            savedOrder.setStatus(OrderStatus.FAILED);
-            orderRepository.save(savedOrder);
-            throw new RuntimeException("Payment processing failed: " + e.getMessage());
-        }
-
-        ////////////////////////////////////////////////////////
-
         if (appliedCouponCode != null) {
             CouponConsumeRequest consumeRequest = new CouponConsumeRequest(
                     appliedCouponCode,
@@ -242,7 +216,7 @@ public class OrderService {
 
     private void validateUserToken(String authToken) {
         try {
-            Boolean isValidUser = userServiceClient.checkUserRole(authToken, "ADMIN");
+            Boolean isValidUser = userServiceClient.checkUserRole(authToken, "USER");
             if (!Boolean.TRUE.equals(isValidUser)) {
                 throw new RuntimeException("Invalid user authentication");
             }
@@ -252,60 +226,4 @@ public class OrderService {
             throw new RuntimeException("User authentication validation failed: " + e.getMessage());
         }
     }
-
-    private void applyDepositTransactionForMerchant(double amount) {
-        TransactionRequest transactionRequestMerchant = new TransactionRequest();
-        transactionRequestMerchant.setCardNumber("6656025033877442");
-        transactionRequestMerchant.setAmount(amount);
-        ResponseEntity<String> depositResponse = bankService.deposit(transactionRequestMerchant);
-
-        // Check if deposit was successful
-        if (!depositResponse.getStatusCode().is2xxSuccessful()) {
-            throw new RuntimeException("Merchant deposit failed: " + depositResponse.getBody());
-        }
-
-        log.info(" merchant deposit done");
-    }
-
-    private void applyWithdrawTransactionForCustomer(double amount, OrderCreateRequest orderModel) {
-        TransactionRequest transactionRequestCustomer = new TransactionRequest();
-        transactionRequestCustomer.setAmount(amount);
-        transactionRequestCustomer.setCardNumber(orderModel.getCardNumber());
-        ResponseEntity<String> withdrawResponse = bankService.withdraw(transactionRequestCustomer);
-        // Check if withdrawal was successful
-        if (!withdrawResponse.getStatusCode().is2xxSuccessful()) {
-            throw new RuntimeException("Customer withdrawal failed: " + withdrawResponse.getBody());
-        }
-        log.info("Customer withdrawal request processed successfully. Response: {}", withdrawResponse.getBody());
-    }
-
-    private void validateCardDetails(OrderCreateRequest request) {
-        // Card number validation
-        if (request.getCardNumber() == null || !request.getCardNumber().matches("^[0-9]{16}$")) {
-            throw new RuntimeException("Invalid card number - must be 16 digits");
-        }
-
-        // Expiry date validation
-        if (request.getExpiryDate() != null && !request.getExpiryDate().isEmpty()) {
-            if (!request.getExpiryDate().matches("^(0[1-9]|1[0-2])/[0-9]{2}$")) {
-                throw new RuntimeException("Invalid expiry date format - use MM/YY");
-            }
-
-            String[] parts = request.getExpiryDate().split("/");
-            int month = Integer.parseInt(parts[0]);
-            int year = Integer.parseInt("20" + parts[1]);
-
-            LocalDate expiry = LocalDate.of(year, month, 1).plusMonths(1).minusDays(1);
-            if (expiry.isBefore(LocalDate.now())) {
-                throw new RuntimeException("Card has expired");
-            }
-        }
-
-
-        // CVV validation
-        if (request.getCvv() != null && !request.getCvv().matches("^[0-9]{3,4}$")) {
-            throw new RuntimeException("Invalid CVV - must be 3 or 4 digits");
-        }
-    }
-
 }
