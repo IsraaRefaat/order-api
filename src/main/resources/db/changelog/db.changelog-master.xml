@@ -9,5 +9,6 @@
     <include file="db/changelog/02-replace-coupon-relation.xml"/>
     <include file="db/changelog/03-add-product-id-to-order-items.xml"/>
     <include file="db/changelog/04-catalog-service-integration.xml"/>
+    <include file="db/changelog/05-add-transaction-ids.xml"/>
 
 </databaseChangeLog>
