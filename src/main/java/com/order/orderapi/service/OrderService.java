@@ -41,6 +41,43 @@ public class OrderService {
     private String merchantEmail;
     private final StockMessageSender stockMessageSender;
 
+    @Transactional
+    public OrderResponse processPayment(Long orderId, PaymentRequest paymentRequest) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found with ID: " + orderId));
+
+        log.warn("Current order status: {}", order.getStatus());
+
+        if (order.getStatus().equals(OrderStatus.PENDING)) {
+            throw new RuntimeException("Order is not in a valid state for payment. Current status: " + order.getStatus());
+        }
+
+        validateCardDetails(paymentRequest);
+
+        // احسبي الـ amount من order.getFinalAmount() مش من البودي
+        double expectedAmount = order.getFinalAmount().doubleValue();
+        paymentRequest.setAmount(expectedAmount); // حطيه بنفسك هنا
+        paymentRequest.setOrderId(orderId); // تأكيد إضافي لو حصل لخبطة
+
+        try {
+            applyWithdrawTransactionForCustomer(expectedAmount, paymentRequest);
+            log.info("Customer withdrawal successful for order: {}", orderId);
+
+            applyDepositTransactionForMerchant(expectedAmount);
+            log.info("Merchant deposit successful for order: {}", orderId);
+
+            order.setStatus(OrderStatus.CONFIRMED);
+            orderRepository.save(order);
+        } catch (Exception e) {
+            log.error("Payment failed for order: {}", orderId, e);
+            order.setStatus(OrderStatus.FAILED);
+            orderRepository.save(order);
+            throw new RuntimeException("Payment failed: " + e.getMessage());
+        }
+
+        return convertToOrderResponse(order);
+    }
+
 
     @Transactional
     public OrderResponse createOrder(OrderCreateRequest request, String authToken) {
@@ -91,32 +128,6 @@ public class OrderService {
         order.calculateFinalAmount();
 
         Order savedOrder = orderRepository.save(order);
-
-        /////////////////////////////////////  banking
-
-
-        validateCardDetails(request);
-
-
-        double amountAfterDiscount = savedOrder.getFinalAmount().doubleValue();
-        try {
-            // 1. Customer withdrawal الأول
-            applyWithdrawTransactionForCustomer(amountAfterDiscount, request);
-            log.info("Customer withdrawal successful for order: {}", savedOrder.getId());
-
-            // 2. لو نجح، اعملي merchant deposit
-            applyDepositTransactionForMerchant(amountAfterDiscount);
-            log.info("Merchant deposit successful for order: {}", savedOrder.getId());
-
-        } catch (Exception e) {
-            log.error("Banking transaction failed for order: {}", savedOrder.getId(), e);
-            // يمكن تغيري status الطلب لـ FAILED
-            savedOrder.setStatus(OrderStatus.FAILED);
-            orderRepository.save(savedOrder);
-            throw new RuntimeException("Payment processing failed: " + e.getMessage());
-        }
-
-        ////////////////////////////////////////////////////////
 
         if (appliedCouponCode != null) {
             CouponConsumeRequest consumeRequest = new CouponConsumeRequest(
@@ -267,7 +278,7 @@ public class OrderService {
         log.info(" merchant deposit done");
     }
 
-    private void applyWithdrawTransactionForCustomer(double amount, OrderCreateRequest orderModel) {
+    private void applyWithdrawTransactionForCustomer(double amount, PaymentRequest orderModel) {
         TransactionRequest transactionRequestCustomer = new TransactionRequest();
         transactionRequestCustomer.setAmount(amount);
         transactionRequestCustomer.setCardNumber(orderModel.getCardNumber());
@@ -279,7 +290,7 @@ public class OrderService {
         log.info("Customer withdrawal request processed successfully. Response: {}", withdrawResponse.getBody());
     }
 
-    private void validateCardDetails(OrderCreateRequest request) {
+    private void validateCardDetails(PaymentRequest request) {
         // Card number validation
         if (request.getCardNumber() == null || !request.getCardNumber().matches("^[0-9]{16}$")) {
             throw new RuntimeException("Invalid card number - must be 16 digits");

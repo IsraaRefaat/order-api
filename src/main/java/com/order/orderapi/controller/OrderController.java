@@ -22,6 +22,12 @@ public class OrderController {
 
     private final OrderService orderService;
 
+    @PostMapping("/{orderId}/payment")
+    public ResponseEntity<OrderResponse> processPayment(@PathVariable Long orderId,
+                                                        @RequestBody PaymentRequest paymentRequest) {
+        return ResponseEntity.ok(orderService.processPayment(orderId, paymentRequest));
+    }
+
     @PostMapping
     public ResponseEntity<OrderResponse> createOrder(
             @Valid @RequestBody OrderCreateRequest request,
