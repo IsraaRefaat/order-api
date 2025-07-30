@@ -21,9 +21,19 @@ public class RabbitMQConfig {
     @Value("${spring.rabbitmq.response.routingkey}")
     private String responseRoutingKey;
 
+    // ---- Notification Queue Config ----
+    public static final String NOTIFICATION_QUEUE = "order-notification-queue";
+    public static final String NOTIFICATION_EXCHANGE = "order-notification-exchange";
+    public static final String NOTIFICATION_ROUTING_KEY = "order.notification.key";
+
     @Bean
     public TopicExchange stockExchange() {
         return new TopicExchange(exchange);
+    }
+
+    @Bean
+    public TopicExchange notificationExchange() {
+        return new TopicExchange(NOTIFICATION_EXCHANGE);
     }
 
     @Bean
@@ -32,10 +42,22 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    public Queue notificationQueue() {
+        return new Queue(NOTIFICATION_QUEUE, true);
+    }
+
+    @Bean
     public Binding responseBinding(Queue responseQueue, TopicExchange stockExchange) {
         return BindingBuilder.bind(responseQueue)
                 .to(stockExchange)
                 .with(responseRoutingKey);
+    }
+
+    @Bean
+    public Binding notificationBinding() {
+        return BindingBuilder.bind(notificationQueue())
+                .to(notificationExchange())
+                .with(NOTIFICATION_ROUTING_KEY);
     }
 
     @Bean
