@@ -11,13 +11,12 @@ public class OrderProducer {
         this.rabbitTemplate = rabbitTemplate;
     }
 
-    public String sendOrderMessage(OrderEvent message) {
+    public void sendOrderMessage(OrderEvent message) {
         rabbitTemplate.convertAndSend(
-                RabbitMQConfig.EXCHANGE,
-                RabbitMQConfig.ROUTING_KEY,
+                RabbitMQConfig.NOTIFICATION_EXCHANGE,
+                RabbitMQConfig.NOTIFICATION_ROUTING_KEY,
                 message
         );
-        return "Notification sent to NotificationService";
 
     }
 }
