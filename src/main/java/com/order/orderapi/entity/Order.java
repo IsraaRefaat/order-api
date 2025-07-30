@@ -57,6 +57,12 @@ public class Order {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    @Column(name = "customer_transaction_id")
+    private String customerTransactionId;
+
+    @Column(name = "merchant_transaction_id")
+    private String merchantTransactionId;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
