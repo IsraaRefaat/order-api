@@ -13,8 +13,8 @@ import org.springframework.web.client.RestTemplate;
 public class BankServiceImp {
 
     private final RestTemplate restTemplate;
-    private final String depositUrl = "http://localhost:8081/api/transactions/deposit";
-    private final String withdrawUrl = "http://localhost:8081/api/transactions/withdraw";
+    private final String depositUrl = "https://bankingservice-production.up.railway.app/api/transactions/deposit";
+    private final String withdrawUrl = "https://bankingservice-production.up.railway.app/api/transactions/withdraw";
 
 
     public ResponseEntity<String> deposit(TransactionRequest transactionRequest) {
