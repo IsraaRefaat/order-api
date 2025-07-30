@@ -8,8 +8,7 @@ import com.order.orderapi.dto.*;
 import com.order.orderapi.entity.Order;
 import com.order.orderapi.entity.OrderItem;
 import com.order.orderapi.entity.OrderStatus;
-import com.order.orderapi.rabbit.OrderEvent;
-import com.order.orderapi.rabbit.OrderProducer;
+import com.order.orderapi.rabbit.StockMessageSender;
 import com.order.orderapi.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,7 +16,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,7 +31,7 @@ public class OrderService {
     private final CouponServiceClient couponServiceClient;
     private final CategoryServiceClient categoryServiceClient;
     private final UserServiceClient userServiceClient;
-    private final OrderProducer orderProducer;
+    private final StockMessageSender stockMessageSender;
 
 
     @Transactional
@@ -91,6 +93,13 @@ public class OrderService {
             couponServiceClient.consumeCoupon(consumeRequest);
         }
 
+        // sending order data to Store Service
+        Map<Long, Integer> products_quantities = new HashMap<>();
+        for(OrderItem orderItem : savedOrder.getOrderItems()){
+            products_quantities.put(orderItem.getProductId(), orderItem.getQuantity());
+        }
+        stockMessageSender.sendConsumeStockMessage(savedOrder.getId(), products_quantities);
+
         log.info("Created order with ID: {} for customer: {}", savedOrder.getId(), request.getCustomerEmail());
         return convertToOrderResponse(savedOrder);
     }
@@ -123,18 +132,7 @@ public class OrderService {
         
         order.setStatus(newStatus);
         Order updatedOrder = orderRepository.save(order);
-
-        if (order.getStatus().equals(OrderStatus.CONFIRMED)) {
-            OrderEvent message = new OrderEvent(
-                    order.getId(),
-                    order.getCustomerEmail(),
-                    order.getCustomerName(),
-                    order.getAppliedCouponCode(),
-                    order.getFinalAmount(),
-                    order.getId()
-            );
-            orderProducer.sendOrderMessage(message);
-        }
+        
         log.info("Updated order {} status to: {}", orderId, newStatus);
         return convertToOrderResponse(updatedOrder);
     }
