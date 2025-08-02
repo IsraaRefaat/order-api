@@ -1,0 +1,126 @@
+{
+	"info": {
+		"_postman_id": "e662f3a0-1c0b-42f7-9f23-6101fde91e62",
+		"name": "order-api-fawry",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "41352369"
+	},
+	"item": [
+		{
+			"name": "create-order-without-coupon",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "  {\r\n    \"customerName\": \"System Admin\",\r\n    \"customerEmail\": \"shimaa@gmail.com\",\r\n    \"orderItems\": [\r\n      {\r\n        \"productId\": 1,\r\n        \"quantity\": 2\r\n      }\r\n    ]\r\n  }",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8082/orders",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8082",
+					"path": [
+						"orders"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "create-order-with-coupon",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "  {\r\n    \"customerName\": \"System Admin\",\r\n    \"customerEmail\": \"shimaa@gmail.com\",\r\n    \"orderItems\": [\r\n      {\r\n        \"productId\": 1,\r\n        \"quantity\": 2\r\n      }\r\n    ],\r\n    \"couponCode\": \"esraa_14\"\r\n  }",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8082/orders",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8082",
+					"path": [
+						"orders"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "get-all-orders",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8082/orders",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8082",
+					"path": [
+						"orders"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "ger-order-by-id",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8082/orders/1",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8082",
+					"path": [
+						"orders",
+						"1"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "get-order-by-customer",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8082/orders/customer/shimaa@gmail.com",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8082",
+					"path": [
+						"orders",
+						"customer",
+						"shimaa@gmail.com"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
