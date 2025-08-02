@@ -1,5 +1,6 @@
 package com.order.orderapi.entity;
 
+import com.order.orderapi.entity.suberclass.AuditableEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -15,12 +16,9 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class Order {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "SEQ_ORDER")
-    @SequenceGenerator(name = "SEQ_ORDER", sequenceName = "SEQ_ORDERS", allocationSize = 1)
-    private Long id;
+@AttributeOverride(name = "id", column = @Column(name = "id"))
+@SequenceGenerator(name = "SEQ_CUSTOM", sequenceName = "SEQ_ORDERS", allocationSize = 1)
+public class Order extends AuditableEntity {
 
     @NotNull
     @Size(min = 1, max = 100)

@@ -1,5 +1,6 @@
 package com.order.orderapi.entity;
 
+import com.order.orderapi.entity.suberclass.BaseEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -13,12 +14,9 @@ import java.math.BigDecimal;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class OrderItem {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "SEQ_ORDER_ITEM")
-    @SequenceGenerator(name = "SEQ_ORDER_ITEM", sequenceName = "SEQ_ORDER_ITEMS", allocationSize = 1)
-    private Long id;
+@AttributeOverride(name = "id", column = @Column(name = "id"))
+@SequenceGenerator(name = "SEQ_CUSTOM", sequenceName = "SEQ_ORDER_ITEMS", allocationSize = 1)
+public class OrderItem extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id", nullable = false)

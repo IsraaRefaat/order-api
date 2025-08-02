@@ -7,31 +7,23 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import com.order.orderapi.service.OrderService;
+import com.order.orderapi.service.impl.OrderServiceImpl;
 import com.order.orderapi.dto.*;
-import com.order.orderapi.entity.OrderStatus;
-
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/orders")
+@RequestMapping("/orders")
 @RequiredArgsConstructor
 @Slf4j
 @CrossOrigin(origins = "http://localhost:4201")
 public class OrderController {
 
-    private final OrderService orderService;
-
-    @PostMapping("/{orderId}/payment")
-    public ResponseEntity<OrderResponse> processPayment(@PathVariable Long orderId,
-                                                        @RequestBody PaymentRequest paymentRequest) {
-        return ResponseEntity.ok(orderService.processPayment(orderId, paymentRequest));
-    }
+    private final OrderServiceImpl orderService;
 
     @PostMapping
     public ResponseEntity<OrderResponse> createOrder(
             @Valid @RequestBody OrderCreateRequest request,
-            @RequestHeader(value = "Authorization", required = false) String authToken) {
+            @RequestHeader(value = "Authorization") String authToken) {
         log.info("Received request to create order for customer: {}", request.getCustomerEmail());
         OrderResponse response = orderService.createOrder(request, authToken);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -58,15 +50,11 @@ public class OrderController {
         return ResponseEntity.ok(response);
     }
 
-    @PutMapping("/{orderId}/status")
-    public ResponseEntity<OrderResponse> updateOrderStatus(
-            @PathVariable Long orderId,
-            @RequestParam OrderStatus status) {
-        log.info("Received request to update order {} status to: {}", orderId, status);
-        OrderResponse response = orderService.updateOrderStatus(orderId, status);
-        return ResponseEntity.ok(response);
+    @PostMapping("/{orderId}/payment")
+    public ResponseEntity<OrderResponse> processPayment(@PathVariable Long orderId,
+                                                        @RequestBody PaymentRequest paymentRequest) {
+        return ResponseEntity.ok(orderService.processPayment(orderId, paymentRequest));
     }
-
 
 
 

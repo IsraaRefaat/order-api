@@ -11,10 +11,6 @@ import java.util.List;
 @Repository
 public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
 
-    List<OrderItem> findByOrderId(Long orderId);
-
     @Query("SELECT oi FROM OrderItem oi WHERE oi.order.customerEmail = :customerEmail")
     List<OrderItem> findByCustomerEmail(@Param("customerEmail") String customerEmail);
-
-    void deleteByOrderId(Long orderId);
 }

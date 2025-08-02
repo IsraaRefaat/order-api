@@ -16,13 +16,8 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     List<Order> findByCustomerEmail(String customerEmail);
 
-    List<Order> findByStatus(OrderStatus status);
-
-    List<Order> findByCustomerEmailAndStatus(String customerEmail, OrderStatus status);
-
+    //TODO not implemented yet
     @Query("SELECT o FROM Order o WHERE o.createdAt BETWEEN :startDate AND :endDate")
     List<Order> findByCreatedAtBetween(@Param("startDate") LocalDateTime startDate, 
                                        @Param("endDate") LocalDateTime endDate);
-
-    Optional<Order> findByIdAndCustomerEmail(Long id, String customerEmail);
 }

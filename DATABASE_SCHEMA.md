@@ -1,5 +1,7 @@
 # Order API Database Schema
 
+**Author**: Esraa Refaat
+
 This document describes the database schema for the Order API service and the changes made to support catalog service integration.
 
 ## Overview
@@ -21,6 +23,8 @@ Main table storing order information.
 | final_amount | DECIMAL(10,2) | NOT NULL, >= 0 | Final amount after applying discounts |
 | applied_coupon_code | VARCHAR(100) | NULL | Coupon code applied to this order |
 | status | VARCHAR(50) | NOT NULL | Order status (PENDING, CONFIRMED, SHIPPED, DELIVERED, CANCELLED) |
+| customer_transaction_id | VARCHAR(255) | NULL | Transaction ID for customer payment |
+| merchant_transaction_id | VARCHAR(255) | NULL | Transaction ID for merchant deposit |
 | created_at | TIMESTAMP | NOT NULL | Timestamp when order was created |
 | updated_at | TIMESTAMP | NOT NULL | Timestamp when order was last updated |
 
@@ -50,11 +54,6 @@ Table storing individual products in each order.
 - `idx_orders_created_at`: Single column index on created_at for date-based queries
 - `idx_order_items_product_id`: Single column index on product_id for product-based queries
 
-### Composite Indexes
-- `idx_orders_customer_email_status`: Composite index for customer-status queries
-- `idx_orders_created_at_status`: Composite index for date-status queries  
-- `idx_order_items_order_product`: Composite index for order-product lookups
-
 ## Constraints
 
 ### Check Constraints
@@ -68,69 +67,45 @@ Table storing individual products in each order.
 ### Foreign Key Constraints
 - `fk_order_items_order_id`: Links order_items.order_id to orders.id
 
-## Views
-
-### v_order_summary
-Provides order summaries with item counts and total quantities.
-
-```sql
-SELECT 
-    o.id, o.customer_email, o.order_total, o.discount_amount, 
-    o.final_amount, o.applied_coupon_code, o.status, 
-    o.created_at, o.updated_at,
-    COUNT(oi.id) as item_count,
-    SUM(oi.quantity) as total_quantity
-FROM orders o
-LEFT JOIN order_items oi ON o.id = oi.order_id
-GROUP BY o.id, ...
-```
-
-### v_customer_order_stats  
-Provides customer order statistics for analytics.
-
-```sql
-SELECT 
-    customer_email,
-    COUNT(*) as total_orders,
-    SUM(final_amount) as total_spent,
-    AVG(final_amount) as avg_order_value,
-    MAX(created_at) as last_order_date,
-    MIN(created_at) as first_order_date
-FROM orders
-GROUP BY customer_email
-```
-
-## Stored Functions
-
-### get_order_with_items(order_id_param BIGINT)
-Returns complete order details with all associated items in a single query.
 
 ## Migration History
 
 ### 01-initial-schema.xml
-- Created initial `orders` and `order_items` tables
-- Created sequences and foreign key constraints
-- Set up basic table structure
+- Created initial `orders` and `order_items` tables with sequences
+- Initial structure includes `coupon_id` (later replaced)
+- Set up foreign key constraints
+- Customer name initially required (later made nullable)
 
-### 02-replace-coupon-relation.xml  
-- Replaced `coupon_id` foreign key with `applied_coupon_code` string
+### 02-replace-coupon-relation.xml
+- Dropped `coupon_id` foreign key column
+- Added `applied_coupon_code` VARCHAR(100) column
 - Updated for microservices architecture (no direct FK to coupon service)
 
 ### 03-add-product-id-to-order-items.xml
-- Added `product_id` column to `order_items` table for catalog service integration
-- Made `customer_name` nullable (not used in current implementation)
-- Added basic performance indexes
-- Set up NOT NULL constraint on `product_id` for new orders
+- Added `product_id` BIGINT column to `order_items` table (initially nullable)
+- Made `customer_name` nullable for orders table
+- Added NOT NULL constraint on `product_id` for new records
+- Created performance indexes:
+  - `idx_order_items_product_id` on order_items.product_id
+  - `idx_orders_customer_email` on orders.customer_email
+  - `idx_orders_status` on orders.status
+  - `idx_orders_created_at` on orders.created_at
 
 ### 04-catalog-service-integration.xml
-- Added data migration for existing records
-- Added comprehensive check constraints for data integrity
-- Added table and column comments for documentation
+- Data migration: Updated existing order_items with default product_id = 1
+- Added comprehensive check constraints for data integrity:
+  - `chk_order_items_quantity_positive`: quantity > 0
+  - `chk_order_items_unit_price_positive`: unit_price >= 0
+  - `chk_order_items_total_price_positive`: total_price >= 0
+  - `chk_orders_total_positive`: order_total >= 0
+  - `chk_orders_final_amount_positive`: final_amount >= 0
+  - `chk_orders_discount_amount_positive`: discount_amount >= 0
 
-### 05-schema-cleanup-and-optimization.xml
-- Added composite indexes for complex queries
-- Created database views for common query patterns
-- Added stored functions for efficient data retrieval
+### 05-add-transaction-ids.xml
+- Added `customer_transaction_id` VARCHAR(255) column to orders table
+- Added `merchant_transaction_id` VARCHAR(255) column to orders table
+- Both columns nullable to support payment transaction tracking
+- Enables audit trail for customer withdrawals and merchant deposits
 
 ## Catalog Service Integration Changes
 
@@ -156,23 +131,25 @@ The major schema change was adding support for catalog service integration:
 
 ## Performance Considerations
 
-- All frequently queried columns have appropriate indexes
-- Composite indexes support common query patterns
-- Views pre-aggregate data for reporting queries
+- Single column indexes on frequently queried fields (customer_email, status, created_at, product_id)
 - Check constraints ensure data integrity at database level
 - Foreign key constraints maintain referential integrity
+- Auto-increment primary keys for optimal performance
 
-## Maintenance
+## Data Integrity Features
 
-- Regular VACUUM and ANALYZE on high-traffic tables
-- Monitor index usage and add/remove as needed
-- Review query performance periodically 
-- Consider partitioning `orders` table by date if volume grows large
-- Archive old order data to maintain performance
+### Check Constraints
+- `chk_order_items_quantity_positive`: Ensures quantity > 0
+- `chk_order_items_unit_price_positive`: Ensures unit_price >= 0
+- `chk_order_items_total_price_positive`: Ensures total_price >= 0
+- `chk_orders_total_positive`: Ensures order_total >= 0
+- `chk_orders_final_amount_positive`: Ensures final_amount >= 0
+- `chk_orders_discount_amount_positive`: Ensures discount_amount >= 0
 
-## Backup and Recovery
+### Foreign Key Constraints
+- `fk_order_items_order_id`: Links order_items.order_id to orders.id
 
-- Full database backup before major schema changes
-- Point-in-time recovery enabled
-- Test restore procedures regularly
-- Document rollback procedures for each migration
+## Documentation
+
+- Migration rollback procedures included in each changeset
+- Clear audit trail of schema evolution through Liquibase changesets
