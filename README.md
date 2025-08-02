@@ -4,6 +4,12 @@ A Spring Boot microservice for managing orders in an e-commerce platform.
 
 **Author**: Esraa Refaat
 
+## Contributors
+
+- **Esraa Refaat** - Project lead and main development
+- **Basma & Shahd** - Notification configuration and messaging
+- **Taghreed** - Bank integration and payment processing
+
 ## Overview
 
 The Order API is part of a microservices architecture that handles order creation, management, and payment processing. It integrates with catalog, coupon, and user services to provide a comprehensive order management solution.
